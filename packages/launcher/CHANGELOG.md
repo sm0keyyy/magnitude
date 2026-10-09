@@ -1,5 +1,19 @@
 # @magnitudedev/cli
 
+## 0.2.7
+
+### Patch Changes
+
+- [`3fe2c30`](https://github.com/magnitudedev/magnitude/commit/3fe2c30b6c8daa58211947df822fd67c2424fb94) Thanks [@thrgreenwald](https://github.com/thrgreenwald)! - - Magnitude is available for Arch Linux, Omarchy, and other Arch-based distributions (x64) as a pacman package. Install it with `sudo pacman -U ./magnitude-desktop.pkg.tar.zst` or the install script, and in-app updates install through pacman. As with the Debian and RPM packages, pacman refuses to upgrade or remove Magnitude while it is running.
+
+- [`44e9fd5`](https://github.com/magnitudedev/magnitude/commit/44e9fd5d1e2fe5f5cd00c5ed5be0e0780231ec8d) Thanks [@thrgreenwald](https://github.com/thrgreenwald)! - - Fix a request without a `seed` repeating the same sample on every retry, which made some requests (such as Gemma 4 E2B over the Responses API with reasoning off) return an empty answer every time. Each request now samples with a fresh seed unless it names one, and the Responses and Anthropic APIs accept `seed` like Chat Completions.
+
+- [`a54897b`](https://github.com/magnitudedev/magnitude/commit/a54897b2993dab95352737532531efa2468e820b) Thanks [@thrgreenwald](https://github.com/thrgreenwald)! - - Fix large images failing in vision models. An image that needed more rows than the engine's per-launch limit failed; images now encode up to 4,096 cells, and larger images are resized to fit.
+
+- [`4dba3cd`](https://github.com/magnitudedev/magnitude/commit/4dba3cd7d018660673d6b7edb303fee981bbc187) Thanks [@thrgreenwald](https://github.com/thrgreenwald)! - - Fix a stray horizontal scrollbar on Windows and Linux in windows narrower than about 1,380 pixels. Page content now fits beside the vertical scrollbar instead of extending under it.
+
+- [`541ccf1`](https://github.com/magnitudedev/magnitude/commit/541ccf13192dab55472e1a03bb8a9a80a9d20cda) Thanks [@thrgreenwald](https://github.com/thrgreenwald)! - - Magnitude writes logs again: `service.log`, `inference.log` and `desktop.log` in `~/.magnitude/logs` record the service, the inference engine and the app, including crashes and restarts. Each file is size-capped. Attach them when reporting a problem.
+
 ## 0.2.6
 
 ### Patch Changes
