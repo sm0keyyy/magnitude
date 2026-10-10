@@ -76,6 +76,33 @@
       }
     },
     {
+      "id": "swift-1.5-qwen3.8-27b",
+      "displayName": "Swift 1.5 Qwen3.8 27B",
+      "description": "UkisAI's reasoning-efficient Qwen3.8 27B fine-tune for coding and agentic tasks.",
+      "releaseDate": "2026-09-16",
+      "parameterization": { "architecture": "dense", "totalParameters": 27320697856 },
+      "support": { "level": "supported" },
+      "repository": "ukisai/Swift-1.5-Qwen3.8-27B-GGUF",
+      "variants": [{"variantId": "gguf:q6", "format": "Q6_K.gguf", "variantLabel": "Q6", "fidelityRank": 60, "quantizationAware": false}],
+      "projector": { "path": "mmproj-Swift-1.5-Qwen3.8-27B-F16.gguf" },
+      "speculativeDecoding": { "method": "dflash2", "draft": { "type": "file", "repository": "z-lab/Qwen3.8-27B-DFlash2-GGUF", "path": "Qwen3.8-27B-DFlash2-Q8_0.gguf" } },
+      "license": "swift-open-license-1.0",
+      "artificialAnalysis": {
+        "score": 33.7,
+        "provenance": {
+          "kind": "estimate",
+          "target": "artificialAnalysisIntelligenceIndex",
+          "methodologyVersion": "4.3.2",
+          "asOfDate": "2026-10-10",
+          "methodology": "Uses the base Qwen3.8 27B score as an unmeasured prior for this fine-tune, not an Artificial Analysis measurement of Swift.",
+          "evidenceUrls": [
+            "https://artificialanalysis.ai/models/qwen3-8-27b",
+            "https://huggingface.co/ukisai/Swift-1.5-Qwen3.8-27B-GGUF"
+          ]
+        }
+      }
+    },
+    {
       "id": "qwen3.8-flash-next",
       "displayName": "Qwen3.8 Flash Next",
       "description": "Large multimodal MoE preview of Qwen's next-generation architecture with strong agentic reasoning and low active compute.",

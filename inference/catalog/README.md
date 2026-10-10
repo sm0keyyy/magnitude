@@ -12,6 +12,21 @@ projector is locked as a related component of the target package.
 A catalog entry declares no context length. Its serving profile is the target's supported maximum
 context from its GGUF metadata, which is the context the engine resolves, serves and assesses.
 
+Swift 1.5 Qwen3.8 27B is available as `swift-1.5-qwen3.8-27b:gguf:q6`. Its
+`Q6_K.gguf` format selector distinguishes Q6_K from the repository's Q6_K_L and Q6_K_S
+files without changing catalog resolution. The entry uses Swift's projector and the same
+locked DFlash2 draft as Qwen3.8 27B. Context and capabilities come from the Swift GGUF.
+Its intelligence score is an explicitly documented base-model estimate, not a measured Swift result.
+
+With the fork's server running:
+
+```sh
+magnitude catalog pull swift-1.5-qwen3.8-27b:gguf:q6
+magnitude models status swift-1.5-qwen3.8-27b:gguf:q6
+magnitude models load swift-1.5-qwen3.8-27b:gguf:q6
+magnitude models stop
+```
+
 ```sh
 cargo run --release -p magnitude-service-catalog-tool -- update-lock ...   # advance the commit map
 cargo run --release -p magnitude-service-catalog-tool -- build-bundle ...  # build the header bundle
