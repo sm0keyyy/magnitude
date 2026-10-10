@@ -469,6 +469,86 @@ fn binds_every_mtp_role_outside_the_target_geometry() {
 }
 
 #[test]
+fn accepts_recurrent_flags_including_the_single_mtp_block() {
+    let mut directory = mtp_directory();
+    directory
+        .metadata
+        .iter_mut()
+        .find(|metadata| metadata.name == "qwen35.block_count")
+        .unwrap()
+        .value = Value::Scalar(Scalar::Unsigned(65));
+    let decoder_tensors = directory
+        .tensors
+        .iter()
+        .filter(|tensor| {
+            tensor.name.starts_with("blk.0.") || tensor.name.starts_with("blk.1.")
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    for tensor in &mut directory.tensors {
+        if let Some(role) = tensor.name.strip_prefix("blk.2.") {
+            tensor.name = format!("blk.64.{role}");
+        }
+    }
+    for layer in 2..64 {
+        let prefix = format!("blk.{}.", layer % 2);
+        for template in &decoder_tensors {
+            if let Some(role) = template.name.strip_prefix(&prefix) {
+                let mut tensor = template.clone();
+                tensor.name = format!("blk.{layer}.{role}");
+                directory.tensors.push(tensor);
+            }
+        }
+    }
+    let recurrent_flags = |length| {
+        Value::Array(
+            (0..length)
+                .map(|layer| Scalar::Bool(layer < 64 && layer % 2 == 0))
+                .collect(),
+        )
+    };
+    directory.metadata.push(Metadata {
+        name: "qwen35.attention.recurrent_layers".into(),
+        value: recurrent_flags(65),
+    });
+    let identity = PackageIdentity {
+        target: ArtifactIdentity([4; 32]),
+        projector: None,
+    };
+    for length in [64, 65] {
+        directory.metadata.last_mut().unwrap().value = recurrent_flags(length);
+        let model = inspect_components(&directory, None, identity.clone()).unwrap();
+        assert_eq!(model.decoder.blocks.len(), 64);
+        assert_eq!(model.head.unwrap().depth(), 1);
+        assert!(matches!(
+            model.decoder.blocks[63].sublayers[0].op,
+            Operator::Attention(_)
+        ));
+    }
+    for length in [63, 66] {
+        directory.metadata.last_mut().unwrap().value = recurrent_flags(length);
+        assert_eq!(
+            inspect_components(&directory, None, identity.clone())
+                .unwrap_err()
+                .to_string(),
+            "invalid per-layer recurrent flags"
+        );
+    }
+    let mut malformed = recurrent_flags(65);
+    let Value::Array(flags) = &mut malformed else {
+        unreachable!()
+    };
+    flags[0] = Scalar::Unsigned(1);
+    directory.metadata.last_mut().unwrap().value = malformed;
+    assert_eq!(
+        inspect_components(&directory, None, identity)
+            .unwrap_err()
+            .to_string(),
+        "invalid per-layer recurrent flags"
+    );
+}
+
+#[test]
 fn projector_description_validates_roles_and_fused_qkv_ranges() {
     let projector = projector();
     let vision = describe_projector(&projector).unwrap();

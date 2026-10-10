@@ -462,14 +462,20 @@ pub fn inspect_components(
                 })
                 .collect::<Vec<_>>()
         }
-        Some(Value::Array(flags)) if flags.len() as u64 == layer_count => flags
-            .iter()
-            .map(|v| match v {
-                Scalar::Bool(true) => Ok(LocalMixerKind::Recurrent),
-                Scalar::Bool(false) => Ok(LocalMixerKind::Attention),
-                _ => Err(invalid("invalid per-layer recurrent flags")),
-            })
-            .collect::<Result<Vec<_>, _>>()?,
+        Some(Value::Array(flags))
+            if flags.len() as u64 == layer_count
+                || (speculative == 1 && flags.len() as u64 == block_count) =>
+        {
+            flags
+                .iter()
+                .take(layer_count as usize)
+                .map(|v| match v {
+                    Scalar::Bool(true) => Ok(LocalMixerKind::Recurrent),
+                    Scalar::Bool(false) => Ok(LocalMixerKind::Attention),
+                    _ => Err(invalid("invalid per-layer recurrent flags")),
+                })
+                .collect::<Result<Vec<_>, _>>()?
+        }
         _ => return Err(invalid("invalid per-layer recurrent flags")),
     };
     let embedding = directory

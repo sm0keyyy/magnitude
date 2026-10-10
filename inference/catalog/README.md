@@ -18,6 +18,9 @@ files without changing catalog resolution. The entry uses Swift's projector and 
 locked DFlash2 draft as Qwen3.8 27B. Context and capabilities come from the Swift GGUF.
 Its intelligence score is an explicitly documented base-model estimate, not a measured Swift result.
 
+Qwen recurrent-layer flags may cover the decoder alone or include its single MTP block.
+Only decoder entries determine the decoder's recurrent and attention layers.
+
 With the fork's server running:
 
 ```sh
