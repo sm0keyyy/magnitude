@@ -11,7 +11,7 @@ test.runIf(Boolean(origin && logPath)).each([true, false])(
   "releases a real generation after a client disconnect, stream=%s",
   async (stream) => {
     const offset = (await readFile(logPath!, "utf8")).length
-    const watcher = watch(logPath!, { signal: AbortSignal.timeout(60_000) })
+    const watcher = watch(logPath!, { signal: AbortSignal.timeout(60_000) })[Symbol.asyncIterator]()
     const rows = async () => (await readFile(logPath!, "utf8")).slice(offset)
       .replace(/\x1b\[[0-9;]*m/g, "").split("\n")
     const waitFor = async (predicate: (lines: string[]) => boolean) => {

@@ -1,7 +1,7 @@
 # Run the private Swift build locally
 
 Working directory: `/Users/jacobfreed/Developer/magnitude-fork`.
-These commands use private version `0.2.6-local.swift.disconnect.20261011` on branch `swift-gguf`.
+These commands use private version `0.2.6-local.swift.disconnect.20261011.1` on branch `swift-gguf`.
 They do not install over `/Applications/Magnitude.app` or use `~/.magnitude`.
 The CLI and ACN were rebuilt with the repository's `deriveLocalRelease` helper.
 The loopback origin supplies the matching release manifest and inference artifact through the normal release resolver.
@@ -12,7 +12,7 @@ The loopback origin supplies the matching release manifest and inference artifac
 In terminal 1, run this exact command from the working directory and leave it running:
 
 ```sh
-bun -e 'const root="bin/private-release-0.2.6-local.swift.disconnect.20261011"; const base="release-candidate"; const manifest=await Bun.file(root+"/magnitude-release.json").json(); const files=new Map([["magnitude-release.json",root+"/magnitude-release.json"],...manifest.artifacts.map(a=>[a.filename,(["cli","acn","icn-base"].includes(a.kind)?root:base)+"/"+a.filename])]); const server=Bun.serve({hostname:"127.0.0.1",port:62361,fetch(request){const path=files.get(new URL(request.url).pathname.split("/").pop()); return path?new Response(Bun.file(path)):new Response("Not found",{status:404});}}); console.log("Private release origin ready at "+server.url);'
+bun -e 'const root="bin/private-release-0.2.6-local.swift.disconnect.20261011.1"; const base="release-candidate"; const manifest=await Bun.file(root+"/magnitude-release.json").json(); const files=new Map([["magnitude-release.json",root+"/magnitude-release.json"],...manifest.artifacts.map(a=>[a.filename,(["cli","acn","icn-base"].includes(a.kind)?root:base)+"/"+a.filename])]); const server=Bun.serve({hostname:"127.0.0.1",port:62361,fetch(request){const path=files.get(new URL(request.url).pathname.split("/").pop()); return path?new Response(Bun.file(path)):new Response("Not found",{status:404});}}); console.log("Private release origin ready at "+server.url);'
 ```
 
 ## Start serve
@@ -20,7 +20,7 @@ bun -e 'const root="bin/private-release-0.2.6-local.swift.disconnect.20261011"; 
 In terminal 2, run this exact command from the working directory and leave it running:
 
 ```sh
-env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 MAGNITUDE_RELEASE_BASE_URL=http://127.0.0.1:62361 MAGNITUDE_ICN_PATH= MAGNITUDE_ICN_LOG=$PWD/bin/rt/logs/inference.log MAGNITUDE_ICN_WORKER_RUST_LOG=magnitude_engine=info,magnitude_scheduler=info RUST_LOG=magnitude_service_server=info bin/private-app-0.2.6-local.swift.disconnect.20261011/Magnitude.app/Contents/Resources/magnitude serve
+env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 MAGNITUDE_RELEASE_BASE_URL=http://127.0.0.1:62361 MAGNITUDE_ICN_PATH= MAGNITUDE_ICN_LOG=$PWD/bin/rt/logs/inference.log MAGNITUDE_ICN_WORKER_RUST_LOG=magnitude_engine=info,magnitude_scheduler=info RUST_LOG=magnitude_service_server=info bin/private-app-0.2.6-local.swift.disconnect.20261011.1/Magnitude.app/Contents/Resources/magnitude serve
 ```
 
 Wait for `Magnitude is serving at http://127.0.0.1:10100`.
@@ -43,10 +43,10 @@ This run downloaded Q6_K through that path; no model files were copied or linked
 The files remain installed in the private data directory, so the pull is optional for this existing installation.
 
 ```sh
-env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 bin/private-app-0.2.6-local.swift.disconnect.20261011/Magnitude.app/Contents/Resources/magnitude catalog pull swift-1.5-qwen3.8-27b:gguf:q6
-env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 bin/private-app-0.2.6-local.swift.disconnect.20261011/Magnitude.app/Contents/Resources/magnitude models load swift-1.5-qwen3.8-27b:gguf:q6
-env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 bin/private-app-0.2.6-local.swift.disconnect.20261011/Magnitude.app/Contents/Resources/magnitude models status swift-1.5-qwen3.8-27b:gguf:q6
-env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 bin/private-app-0.2.6-local.swift.disconnect.20261011/Magnitude.app/Contents/Resources/magnitude catalog show swift-1.5-qwen3.8-27b:gguf:q6
+env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 bin/private-app-0.2.6-local.swift.disconnect.20261011.1/Magnitude.app/Contents/Resources/magnitude catalog pull swift-1.5-qwen3.8-27b:gguf:q6
+env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 bin/private-app-0.2.6-local.swift.disconnect.20261011.1/Magnitude.app/Contents/Resources/magnitude models load swift-1.5-qwen3.8-27b:gguf:q6
+env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 bin/private-app-0.2.6-local.swift.disconnect.20261011.1/Magnitude.app/Contents/Resources/magnitude models status swift-1.5-qwen3.8-27b:gguf:q6
+env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 bin/private-app-0.2.6-local.swift.disconnect.20261011.1/Magnitude.app/Contents/Resources/magnitude catalog show swift-1.5-qwen3.8-27b:gguf:q6
 ```
 
 Wait for `Runtime Ready`. The catalog detail should show `Acceleration DFlash2`.
@@ -98,7 +98,7 @@ This test needs a loaded model. Ordinary suites skip it unless the origin and lo
 In terminal 3:
 
 ```sh
-env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 bin/private-app-0.2.6-local.swift.disconnect.20261011/Magnitude.app/Contents/Resources/magnitude models stop
+env MAGNITUDE_DEV_DATA_DIR=$PWD/bin/rt MAGNITUDE_DEV_PORT=10100 bin/private-app-0.2.6-local.swift.disconnect.20261011.1/Magnitude.app/Contents/Resources/magnitude models stop
 ```
 
 Then press Ctrl+C in terminal 2 to stop serve, and in terminal 1 to stop the origin.

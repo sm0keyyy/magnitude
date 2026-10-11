@@ -85,9 +85,12 @@ fn main() -> anyhow::Result<()> {
     magnitude_executor::platform::relax_gpu_watchdog();
     let cli = Cli::parse();
     match cli.command {
-        // The engine worker owns standard output for its protocol: it installs no telemetry
-        // subscriber and runs no async runtime of the service's.
+        // The worker owns protocol stdout and runs no service runtime.
+        // Explicit diagnostics install only the existing stderr subscriber.
         Command::InferenceWorker => {
+            let _diagnostics = std::env::var_os("MAGNITUDE_ICN_WORKER_RUST_LOG")
+                .map(|_| telemetry::init(false))
+                .transpose()?;
             worker_process::install_parent_watchdog()?;
             std::process::exit(run_inference_worker());
         }
