@@ -92,6 +92,14 @@ It repeats the request without a stream and closes the client through its socket
 The retained JSON records the token time and release delay for each request.
 This test needs a loaded model. Ordinary suites skip it unless the origin and log variables exist.
 
+Observed on 2026-10-11 with private version `0.2.6-local.swift.disconnect.20261011.1`:
+
+- Streaming: six output batches, 3,836 client bytes, 36.5 ms median token time, and slot release 7 ms after disconnect.
+- Non-streaming: six output batches, no response bytes, 36.25 ms median token time, and slot release 10 ms after timeout.
+- Both requests finished as `Cancelled`. Neither published output after the worker received cancellation.
+
+Receipts: `bin/disconnect-smoke.json` and `bin/rt/logs/inference.log`.
+The installed inference binary's SHA-256 was `4c94f5f5f361954d59087eb34b1b7778c403dbad082e2ba36e0ea4199458b294`.
 
 ## Stop everything
 

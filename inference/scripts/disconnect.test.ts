@@ -1,5 +1,6 @@
-import { readFile, watch, writeFile } from "node:fs/promises"
+import { readFile, writeFile } from "node:fs/promises"
 import { request } from "node:http"
+import { setTimeout } from "node:timers/promises"
 import { expect, test } from "vitest"
 
 const origin = process.env.MAGNITUDE_DISCONNECT_ORIGIN
@@ -11,14 +12,14 @@ test.runIf(Boolean(origin && logPath)).each([true, false])(
   "releases a real generation after a client disconnect, stream=%s",
   async (stream) => {
     const offset = (await readFile(logPath!, "utf8")).length
-    const watcher = watch(logPath!, { signal: AbortSignal.timeout(60_000) })[Symbol.asyncIterator]()
+    const deadline = AbortSignal.timeout(59_000)
     const rows = async () => (await readFile(logPath!, "utf8")).slice(offset)
-      .replace(/\x1b\[[0-9;]*m/g, "").split("\n")
+      .replace(/(?:\x1b|\\x1b)\[[0-9;]*m/g, "").split("\n")
     const waitFor = async (predicate: (lines: string[]) => boolean) => {
       for (;;) {
         const lines = await rows()
         if (predicate(lines)) return lines
-        await watcher.next()
+        await setTimeout(5, undefined, { signal: deadline })
       }
     }
     const body = JSON.stringify({
@@ -71,7 +72,6 @@ test.runIf(Boolean(origin && logPath)).each([true, false])(
       }
     } finally {
       client.destroy()
-      await watcher.return?.()
     }
   },
   60_000,
