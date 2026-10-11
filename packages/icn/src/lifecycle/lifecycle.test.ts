@@ -45,6 +45,7 @@ const config = (host: "127.0.0.1" | "::1" = "127.0.0.1") =>
       cacheRoot: Option.some("/data/cache"),
       huggingFaceCaches: ["/read-only/hf"],
     }),
+    diagnosticLog: Option.none(),
     host,
     startupTimeout: Duration.seconds(30),
     gracefulShutdownTimeout: Duration.seconds(5),

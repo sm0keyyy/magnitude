@@ -45,8 +45,12 @@ transferred through owned Windows handles into Tokio's standard child-stream ada
 measurement owner closes its job before disposing of the adapters, so pending pipe reads can finish
 on child exit. Inference-worker ownership begins immediately after spawn, before the load
 handshake. The engine protocol runs over the worker's standard input and output as blocking
-handles; its standard error is drained into ICN's log and a bounded tail accompanies load
-failures. Dropping the last engine client closes the transport, and the worker exits.
+handles. ICN drains their standard error and retains a bounded tail for load failures.
+The host can append ICN's standard error to an explicit private diagnostic file.
+Log failures do not stop inference. Without an explicit log file, diagnostics remain in memory.
+Worker diagnostics default to errors. An explicit worker filter enables request token,
+cancellation, and slot-release records without prompt or output text.
+Dropping the last engine client closes the transport, and the worker exits.
 No independent ICN discovery or durable owner store exists.
 Platform child acquisition is a scoped capability supplied by ACN's host composition. It owns exact
 process identity, separate standard streams, exit observation and single-flight tree retirement.

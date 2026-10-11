@@ -91,9 +91,11 @@ one (templates render it back), otherwise a fresh random one. A
 caller stop sequence ends output with a stop-sequence termination; tool calls
 terminate as tool calls; the output limit or context end is a length
 termination. Terminal usage and timings come from actual engine execution;
-progressive per-token timings are host-observed. Client disconnection cancels
-its request; one request's cancellation does not retire shared device work
-still used by peers.
+progressive per-token timings are host-observed. A client disconnect or timeout
+cancels its request, before headers and throughout the response body.
+The gateway preserves that lifetime across its upstream request.
+Cancellation releases the request after its current execution step reconciles.
+One request's cancellation does not retire shared device work still used by peers.
 
 An ordinary stream commits its HTTP response only after the engine admitted the
 request, so preparation and admission failures keep their HTTP status. A

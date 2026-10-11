@@ -149,6 +149,9 @@ const makeProcess = (dataDir: string, modelStore: string) =>
         cacheRoot: Option.some(join(dataDir, "cache")),
         huggingFaceCaches: resolveHuggingFaceCacheRoots(),
       }),
+      diagnosticLog: Option.fromNullable(process.env.MAGNITUDE_ICN_LOG?.trim()).pipe(
+        Option.filter(path => path.length > 0),
+      ),
       host: "127.0.0.1",
       startupTimeout: Duration.seconds(150),
       gracefulShutdownTimeout: Duration.millis(500),

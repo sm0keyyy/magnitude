@@ -254,6 +254,7 @@ impl Session {
                 }
             }
             HostMessage::Cancel { request_id } => {
+                tracing::info!(worker.request_id = request_id.0, "generation cancel received");
                 if let Some(pending) = self
                     .admissions
                     .iter_mut()
@@ -492,6 +493,11 @@ impl Session {
         };
         match reply {
             Ok(WorkerReply::Admitted { request, receiver }) => {
+                tracing::info!(
+                    worker.request_id = pending.id.0,
+                    engine.request_id = request.0,
+                    "generation admitted"
+                );
                 if pending.cancelled {
                     // Dropping the receiver releases the request.
                     return Ok(());
@@ -538,6 +544,11 @@ impl Session {
                 match stream.receiver.poll_next(&mut context) {
                     Poll::Pending => break,
                     Poll::Ready(Some(Publication::Output(tokens))) => {
+                        tracing::info!(
+                            worker.request_id = id.0,
+                            output.tokens = tokens.len(),
+                            "generation output"
+                        );
                         stream.credit -= 1;
                         messages.push(WorkerMessage::Output {
                             request_id: id,

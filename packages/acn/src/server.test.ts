@@ -2,6 +2,7 @@ import { BunContext, BunHttpServer } from "@effect/platform-bun"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { scheduler } from "node:timers/promises"
 import type { MagnitudeHealthResponse } from "@magnitudedev/acn-protocol"
 import { FetchHttpClient, HttpBody, HttpClient, HttpClientRequest, HttpServer, HttpServerRequest, HttpServerResponse } from "@effect/platform"
 import * as HttpLayerRouter from "@effect/platform/HttpLayerRouter"
@@ -145,6 +146,64 @@ describe("ACN public HTTP listener", () => {
       expect((yield* rpc(origin, ACN_INSTANCE_ID)).status).toBe(503)
       expect(dispatched).toBe(1)
     })).pipe(Effect.provide(FetchHttpClient.layer)))
+  })
+
+  it.each([true, false])("stops upstream work after a client disconnect, stream=%s", async (stream) => {
+    let generated = 0
+    let active = 0
+    const started = Promise.withResolvers<void>()
+    const stopped = Promise.withResolvers<void>()
+    const upstream = Bun.serve({
+      hostname: "127.0.0.1", port: 0, idleTimeout: 0,
+      async fetch(request) {
+        await request.json()
+        active += 1
+        let output: ReadableStreamDefaultController<Uint8Array> | undefined
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) { output = controller },
+        })
+        const generate = async () => {
+          while (!request.signal.aborted) {
+            generated += 1
+            if (stream) output!.enqueue(new TextEncoder().encode(`data: ${generated}\n\n`))
+            if (generated === 3) started.resolve()
+            await scheduler.yield()
+          }
+          active -= 1
+          stopped.resolve()
+        }
+        void generate()
+        if (!stream) await stopped.promise
+        return new Response(stream ? body : "", {
+          headers: { "content-type": stream ? "text/event-stream" : "application/json" },
+        })
+      },
+    })
+    try {
+      await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+        const lifecycle = yield* makeAcnServiceLifecycle()
+        const publicRouter = yield* HttpLayerRouter.make
+        yield* installAcnPublicRoutes(publicRouter, lifecycle, {
+          origin: new URL(loopbackOrigin(upstream.port!)), clientOptions: {},
+        })
+        const origin = loopbackOrigin(yield* listen(publicRouter, 0))
+        yield* Effect.tryPromise(async () => {
+          const controller = new AbortController()
+          const response = fetch(`${origin}/inference/v1/chat/completions`, {
+            method: "POST", body: JSON.stringify({ model: "test-model", stream }),
+            headers: { "content-type": "application/json" }, signal: controller.signal,
+          }).then(async response => response.text()).catch(() => undefined)
+          await started.promise
+          controller.abort()
+          await stopped.promise
+          await response
+          expect(generated).toBeGreaterThanOrEqual(3)
+          expect(active).toBe(0)
+        }).pipe(Effect.timeout("2 seconds"))
+      })))
+    } finally {
+      upstream.stop(true)
+    }
   })
 })
 

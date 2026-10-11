@@ -2343,6 +2343,48 @@ async fn dropping_a_committed_stream_cancels_the_generation() {
 }
 
 #[tokio::test]
+async fn disconnecting_a_real_http_client_cancels_chat_generation() {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::{TcpListener, TcpStream};
+
+    for streaming in [true, false] {
+        let mut script = Script::text("first");
+        script.hang = true;
+        let source = Scripted::new(script);
+        let observed = source.observed.clone();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move { axum::serve(listener, app(source)).await.unwrap() });
+        let mut client = TcpStream::connect(address).await.unwrap();
+        let mut body = minimal_request();
+        body["stream"] = json!(streaming);
+        let body = body.to_string();
+        client.write_all(format!(
+            "POST /v1/chat/completions HTTP/1.1\r\nHost: {address}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+            body.len(),
+        ).as_bytes()).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(1), async {
+            while observed.invocations.load(Ordering::Acquire) == 0 {
+                tokio::task::yield_now().await;
+            }
+            if streaming {
+                let mut bytes = [0; 4096];
+                assert!(client.read(&mut bytes).await.unwrap() > 0);
+            }
+        }).await.expect("the HTTP request reaches generation");
+        drop(client);
+        let cancelled = tokio::time::timeout(Duration::from_secs(1), async {
+            while !observed.cancelled.load(Ordering::Acquire) {
+                tokio::task::yield_now().await;
+            }
+        }).await;
+        server.abort();
+        let _ = server.await;
+        cancelled.expect("a disconnected HTTP client cancels its live generation");
+    }
+}
+
+#[tokio::test]
 async fn template_application_and_properties_are_host_only() {
     let source = Scripted::new(Script::text("unused"));
     let observed = source.observed.clone();

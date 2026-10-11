@@ -7,3 +7,5 @@ Add Swift 1.5 Qwen3.8 27B Q6_K to the model catalog with the base model's DFlash
 Accept Qwen recurrent-layer flags that include the single MTP block without changing decoder geometry.
 
 Use the kernel memorystatus percentage of installed RAM for macOS host-available memory.
+
+Stop chat generation when its client disconnects, and support an explicit private inference log.

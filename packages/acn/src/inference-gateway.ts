@@ -127,7 +127,7 @@ export const proxyOpenAiInferenceRequest = async (
       method: source.method,
       headers,
       body: source.body,
-      signal,
+      signal: AbortSignal.any([source.signal, signal]),
       ...localEngineFetch,
     },
   )

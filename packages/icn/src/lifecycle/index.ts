@@ -104,6 +104,7 @@ export class IcnLifecycleConfig extends Schema.Class<IcnLifecycleConfig>(
 )({
   binary: IcnBinaryResolutionConfig,
   storage: IcnStorageConfig,
+  diagnosticLog: Schema.optionalWith(NonEmpty, { as: "Option", exact: true }),
   host: Schema.Literal("127.0.0.1", "::1"),
   startupTimeout: Schema.DurationFromSelf.pipe(
     Schema.greaterThanDuration(Duration.zero)
@@ -380,6 +381,17 @@ const acquireIcn = (input: IcnLifecycleConfig) =>
     const resolver = yield* IcnBinaryResolver;
     const reporter = yield* IcnPreparationReporter;
     const binary = yield* resolver.resolve(config.binary);
+    const logFile = yield* Option.match(config.diagnosticLog, {
+      onNone: () => Effect.succeed(Option.none<FileSystem.File>()),
+      onSome: (path) => Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(path), { recursive: true, mode: 0o700 });
+        return yield* fs.open(path, { flag: "a", mode: 0o600 });
+      }).pipe(
+        Effect.tapError(error => Effect.logWarning("Inference log unavailable", error)),
+        Effect.option,
+      ),
+    });
     yield* reporter.report({ _tag: "Starting" });
     const instanceId = yield* opaqueInstanceId;
     const authorization = yield* opaqueInstanceId;
@@ -445,6 +457,12 @@ const acquireIcn = (input: IcnLifecycleConfig) =>
       Effect.forkScoped
     );
     yield* process.stderr.pipe(
+      Stream.tap(bytes => Option.match(logFile, {
+        onNone: () => Effect.void,
+        onSome: file => file.writeAll(bytes).pipe(
+          Effect.catchAll(error => Effect.logWarning("Inference log write failed", error)),
+        ),
+      })),
       Stream.decodeText(),
       Stream.runForEach((chunk) =>
         appendBounded(output, chunk, config.outputLimitBytes)

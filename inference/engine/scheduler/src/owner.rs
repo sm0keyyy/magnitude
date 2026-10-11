@@ -678,6 +678,7 @@ impl<F: ProgramFamily> Owner<F> {
 
     /// Release a request the host abandoned: no terminal outcome reaches it.
     pub fn cancel(&mut self, request: RequestId) {
+        tracing::info!(engine.request_id = request.0, "generation cancelled");
         self.terminate_request(request, true);
     }
 
@@ -2776,7 +2777,15 @@ impl<F: ProgramFamily> Service<F> {
     /// Close a terminal request's executor state and forget it.
     fn retire(&mut self, id: RequestId) -> Result<(), RequestError> {
         self.domain.close(id).map_err(invariant("request retirement"))?;
-        self.requests.remove(&id);
+        if let Some(request) = self.requests.remove(&id) {
+            let generation = request.state.generation();
+            tracing::info!(
+                engine.request_id = id.0,
+                output.tokens = generation.usage().completion_tokens,
+                finish.reason = ?generation.finish_reason(),
+                "generation slot released"
+            );
+        }
         self.epoch.advance();
         Ok(())
     }

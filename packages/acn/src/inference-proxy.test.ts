@@ -53,7 +53,7 @@ describe("ACN inference proxy", () => {
     expect(forwardedUrl).toBe("http://127.0.0.1:43210/v1/chat/completions?stream=true")
     expect(new Headers(forwarded?.headers).get("authorization")).toBe("Bearer private-icn")
     expect(new Headers(forwarded?.headers).has("x-magnitude-acn-id")).toBe(false)
-    expect(forwarded?.signal).toBe(signal)
+    expect(forwarded?.signal?.aborted).toBe(false)
     expect(await new Response(forwarded?.body).text()).toBe("request bytes")
     expect(result.status).toBe(206)
     expect(result.headers.get("connection")).toBeNull()

@@ -135,7 +135,11 @@ impl WorkerLauncher {
         command
             .arg(role.subcommand())
             .env("MAGNITUDE_OTEL", "0")
-            .env("RUST_LOG", "error")
+            .env(
+                "RUST_LOG",
+                std::env::var_os("MAGNITUDE_ICN_WORKER_RUST_LOG")
+                    .unwrap_or_else(|| "error".into()),
+            )
             .env_remove("MAGNITUDE_OTEL_ENDPOINT")
             .env_remove("OTEL_EXPORTER_OTLP_ENDPOINT")
             .env_remove("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
