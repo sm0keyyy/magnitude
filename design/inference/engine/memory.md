@@ -43,7 +43,7 @@ containment; in correct operation it never fires.
 Every memory domain has two thresholds from its own capacity: the planning reserve
 `P = max(capacity / 10, 2 GiB)` and the emergency reserve `E = max(capacity / 20, 1 GiB)`. The
 values are defined once, in the policy the host passes to the engine. They apply equally to host
-RAM and to a dedicated device's own memory; there is no other reserve and no OS pressure signal.
+RAM and to a dedicated device's own memory; there is no other reserve.
 
 ## Standing and claims
 
@@ -106,8 +106,9 @@ target weights, bound constants and the pristine recurrent seed.
 ## Bands
 
 The heap observes every domain it uses on every claim and every 100 ms while loaded. Headroom is
-the domain's observed available bytes bounded by applicable process limits: host free-and-inactive
-or available memory and commit, CUDA free bytes, or Vulkan budget less usage.
+the domain's observed available bytes bounded by applicable process limits. macOS uses
+`kern.memorystatus_level / 100 × hw.memsize`; other hosts use available memory and commit.
+CUDA uses free bytes, and Vulkan uses budget less usage.
 
 | Headroom | Band | Engine behavior |
 |---|---|---|
@@ -124,7 +125,7 @@ immediately, and a continuous second of Blind is treated as Reclaim. If Reclaim 
 second after releases are exhausted and in-flight work completes, the engine unloads the model. An
 admission attempted during Blind is refused at once with the typed `MemoryObservationUnavailable`
 result; during Reclaim it is refused at once as memory pressure. Already accepted work retains its state while the engine
-retries its observation. The engine reads no OS pressure signal.
+retries its observation.
 
 ## Release order
 
@@ -164,7 +165,7 @@ kill is independent fault containment; it chooses nothing to release.
 - No engine claim leaves any used domain's headroom at or below its planning reserve; a claim
   never unloads the model; persistent Reclaim ends in the typed unloaded state within the
   one-second bound.
-- Threshold values exist in one policy definition; no code path reads an OS pressure signal.
+- Threshold values exist in one policy definition.
 - Stable fit capacity is capacity under process limits (and the Metal working set) less the
   planning reserve.
 - State growth allocates exactly one claimed slab per growing domain without copying existing

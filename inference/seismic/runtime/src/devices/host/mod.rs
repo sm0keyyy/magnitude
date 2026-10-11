@@ -106,10 +106,8 @@ pub struct HeadroomEstimate {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HeadroomBasis {
-    /// macOS: (free + inactive pages) × page size. Inactive pages can be
-    /// reclaimed or compressed; wired, active and compressor pages cannot be
-    /// assumed reclaimable.
-    MachFreeAndInactivePages,
+    /// macOS: `kern.memorystatus_level / 100 × hw.memsize`, rounded down to bytes.
+    MacOsMemorystatusLevel,
     /// Linux `MemAvailable`.
     LinuxMemAvailable,
     /// Windows: the lesser of available physical memory and available commit.

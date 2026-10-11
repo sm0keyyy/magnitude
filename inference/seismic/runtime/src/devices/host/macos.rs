@@ -1,4 +1,4 @@
-//! macOS 13+: `sysctl hw.memsize` and Mach `HOST_VM_INFO64`.
+//! macOS 13+: `sysctl hw.memsize`, `kern.memorystatus_level`, and Mach `HOST_VM_INFO64`.
 //!
 //! macOS does not enforce `RLIMIT_AS`/`RLIMIT_DATA` against allocations, so
 //! no process memory limit applies.
@@ -61,10 +61,25 @@ pub(super) fn status() -> Result<HostMemoryStatus, ObservationError> {
     let statistics = unsafe { statistics.assume_init() };
     let free_pages = u64::from(statistics.free_count);
     let inactive_pages = u64::from(statistics.inactive_count);
-    let headroom = free_pages
-        .checked_add(inactive_pages)
-        .and_then(|pages| pages.checked_mul(page_size_bytes))
-        .ok_or_else(|| ObservationError::Failed("Mach headroom overflow".into()))?;
+    let mut level = 0_u32;
+    let mut length = std::mem::size_of::<u32>();
+    // SAFETY: the output pointer covers `length` writable bytes and the name is NUL-terminated.
+    let result = unsafe {
+        libc::sysctlbyname(
+            c"kern.memorystatus_level".as_ptr(),
+            (&mut level as *mut u32).cast(),
+            &mut length,
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+    if result != 0 || length != std::mem::size_of::<u32>() {
+        return Err(ObservationError::Failed(format!(
+            "sysctl kern.memorystatus_level returned status {result} with {length} bytes"
+        )));
+    }
+    let installed_bytes = capacity().map_err(ObservationError::Failed)?.bytes;
+    let headroom = headroom_from_memorystatus(installed_bytes, level)?;
     Ok(HostMemoryStatus {
         sampled_at,
         measurements: HostMeasurements::MacOs {
@@ -81,9 +96,55 @@ pub(super) fn status() -> Result<HostMemoryStatus, ObservationError> {
         },
         headroom: HeadroomEstimate {
             bytes: headroom,
-            basis: HeadroomBasis::MachFreeAndInactivePages,
+            basis: HeadroomBasis::MacOsMemorystatusLevel,
         },
         limits: Vec::new(),
         limit_visibility: LimitVisibility::Complete,
     })
+}
+
+fn headroom_from_memorystatus(installed_bytes: u64, level: u32) -> Result<u64, ObservationError> {
+    if level > 100 {
+        return Err(ObservationError::Failed(format!(
+            "kern.memorystatus_level is {level}, expected a percentage from 0 to 100"
+        )));
+    }
+    // Widen before scaling so the percentage cannot overflow or lose fractional RAM bytes.
+    Ok((u128::from(installed_bytes) * u128::from(level) / 100) as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn memorystatus_percentage_scales_installed_ram() {
+        for (installed, level, expected) in [
+            (51_539_607_552, 0, 0),
+            (51_539_607_552, 89, 45_870_250_721),
+            (51_539_607_552, 100, 51_539_607_552),
+            (3, 99, 2),
+            (u64::MAX, 100, u64::MAX),
+        ] {
+            assert_eq!(headroom_from_memorystatus(installed, level).unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_memorystatus_percentages() {
+        for level in [101, u32::MAX] {
+            assert!(matches!(
+                headroom_from_memorystatus(51_539_607_552, level),
+                Err(ObservationError::Failed(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn observes_memorystatus_headroom_on_macos() {
+        let observation = status().unwrap();
+        assert_eq!(observation.headroom.basis, HeadroomBasis::MacOsMemorystatusLevel);
+        assert!(observation.headroom.bytes <= capacity().unwrap().bytes);
+        assert!(matches!(observation.measurements, HostMeasurements::MacOs { .. }));
+    }
 }
