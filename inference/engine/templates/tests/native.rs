@@ -124,6 +124,43 @@ fn real_templates_preserve_tools_reasoning_and_unicode_at_every_byte_split() {
 }
 
 #[test]
+fn qwen_natural_finish_keeps_unclosed_reasoning() {
+    let mut request = request();
+    request.tools.clear();
+    let plan = Template::new(QWEN35, &Default::default()).unwrap().prepare(&request).unwrap();
+    for output in ["consider", "réflexion 世界", "consider\n\n", "consider</thin", "consider<tool_cal"] {
+        for width in [1, 2, output.len()] {
+            let mut stream = plan.stream(4096).unwrap();
+            let mut result = Transcript::default();
+            for chunk in output.as_bytes().chunks(width) {
+                result.accept(stream.feed(chunk).unwrap());
+            }
+            result.accept(stream.finish(TerminalCause::Natural).unwrap());
+            assert_eq!(result.reasoning, output);
+            assert!(result.content.is_empty());
+            assert_eq!(result.finish, Some(TerminalCause::Natural));
+        }
+    }
+}
+
+#[test]
+fn qwen_constrained_finish_requires_closed_reasoning() {
+    let mut schema_request = request();
+    schema_request.tools.clear();
+    schema_request.json_schema = Some(json!({
+        "type":"object","properties":{"query":{"type":"string"}},"required":["query"]
+    }));
+    let mut required_request = request();
+    required_request.tool_choice = ToolChoice::Required;
+    for request in [request(), required_request, schema_request] {
+        let plan = Template::new(QWEN35, &Default::default()).unwrap().prepare(&request).unwrap();
+        let mut stream = plan.stream(4096).unwrap();
+        stream.feed(b"consider").unwrap();
+        assert!(stream.finish(TerminalCause::Natural).is_err());
+    }
+}
+
+#[test]
 fn truncation_never_completes_partial_tool_calls() {
     let plan = Template::new(QWEN, &Default::default())
         .unwrap()

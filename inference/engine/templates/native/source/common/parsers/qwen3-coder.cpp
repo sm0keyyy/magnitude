@@ -75,9 +75,13 @@ common_chat_params common_chat_params_init_qwen3_coder(const common_chat_templat
 
         auto reasoning = p.eps();
         if (supports_reasoning && extract_reasoning) {
+            auto reasoning_end = p.literal("</think>") | p.peek(p.literal("<tool_call>"));
+            if (!include_grammar) {
+                reasoning_end |= p.end();
+            }
             reasoning = p.optional("<think>" + p.space() +
                                    p.rule("reasoning-text", p.reasoning(p.until_one_of({ "</think>", "<tool_call>" }))) +
-                                   (p.literal("</think>") | p.peek(p.literal("<tool_call>"))));
+                                   reasoning_end);
         }
 
         // Response format parser. Without tool calls, only </think> closes
